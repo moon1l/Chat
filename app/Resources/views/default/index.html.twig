@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="chat">
+    <h1>Чат</h1>
+    <ul id="chat-list"></ul>
+    <textarea id="form-message" placeholder="Введіть своє повідомлення"></textarea>
+        <button type="submit" id="form-submit"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREYz09o5ZsOmmvfFcCG_oSpmpZmjw5o9vdUgB3pvgiB3tF7X7vhg" alt="send"></button>
+    </div>
+{% endblock %}
+
+    {% block stylesheets %}
+    <style>
+        body {margin: 0; font-family: monospace;}
+        .chat {
+            position: absolute;
+            bottom: 50px;
+            right: 0;}
+        #form-message {
+            padding: 15px;
+            width: 300px;
+            resize: none;
+            outline: none;
+            border-radius: 5px;
+        }
+        #form-submit {
+            position: relative;
+            right: 80px;
+            bottom: 8px;
+            border: none;
+            outline: none;
+            background-color: #fff;
+        }
+        #form-submit img{
+            width: 50px;
+        }
+        ul {position: relative; right: 30px;}
+        li {list-style: none;
+        font-size: 18px;
+            margin: 0;}
+    </style>
+    {% endblock %}
+
+{% block javascripts %}
+<script>
+    var clientInformation = {
+        username: new Date()
+    };
+
+    // START SOCKET CONFIG
+
+    var conn = new WebSocket('ws://127.0.0.1:8000');
+
+    conn.onopen = function() {
+        console.info("Connection established succesfully");
+    };
+
+    conn.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        Chat.appendMessage(data.username, data.message);
+
+        console.log(data);
+    };
+
+    conn.onerror = function(e){
+        alert("Error: something went wrong with the socket.");
+        console.error(e);
+    };
+    // END SOCKET CONFIG
+
+    document.getElementById("form-submit").addEventListener("click",function(){
+        var msg = document.getElementById("form-message").value;
+
+        if(!msg){
+            alert("Please send something on the chat");
+        }
+
+        Chat.sendMessage(msg);
+        // Empty text area
+        document.getElementById("form-message").value = "";
+    }, false);
+
+    // Mini API to send a message with the socket and append a message in a UL element.
+    var Chat = {
+        appendMessage: function(username,message){
+            var from;
+
+            if(username == clientInformation.username){
+                from = "Я";
+            }else{
+                from = "Анонім";
+            }
+
+            // Append List Item
+            var ul = document.getElementById("chat-list");
+            var li = document.createElement("li");
+            li.appendChild(document.createTextNode(from + ": "+ message));
+            ul.appendChild(li);
+        },
+        sendMessage: function(text){
+            clientInformation.message = text;
+            // Send info as JSON
+            conn.send(JSON.stringify(clientInformation));
+            // Add my own message to the list
+            this.appendMessage(clientInformation.username, clientInformation.message);
+        }
+    };
+</script>
+{% endblock %}
+
+
+
